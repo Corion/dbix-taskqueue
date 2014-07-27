@@ -294,6 +294,31 @@ SQL
     @{ $self->create_tasks([$task]) }
 }
 
+=head2 C<< $q->purge >>
+
+  $q->purge()
+
+Marks all reserved, pending or running tasks as abandoned.
+
+This is mostly useful if too many bogus jobs have been submitted
+to a queue and you want a fresh start.
+
+=cut
+
+sub purge {
+    my( $self )= @_;
+    my $table= $self->table;
+    $self->dbh->do(<<SQL, {}, $self->{queue});
+        update $table
+        set status = case
+            when status in ('pending','reserved') then 'cancelled'
+            else 'abandoned'
+        end
+        where status in ('pending','running','reserved')
+          and queue = ?
+SQL
+}
+
 sub update_task {
     my( $self, $task )= @_;
     my $table= $self->table;
