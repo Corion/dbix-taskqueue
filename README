@@ -1,0 +1,134 @@
+NAME
+    DBIx::TaskQueue - a persistent task queue for long running tasks
+
+SYNOPSIS
+      # Producer
+      my $queue= DBIx::TaskQueue->new(
+          dsn => 'dbi:SQLite:dbname=mytaskqueue.sqlite',
+          queue => 'http.fetch',
+      );
+      my $task= $queue->enqueue(
+          payload => {
+              url => 'http://example.com/',
+              target => 'example.com.html',
+          },
+          start_in => 60, # Run that task in 10 minutes
+      );
+      print "Submitted task " . $task->id;
+
+      # Consumer
+      use DBIx::TaskQueue::Worker;
+      use LWP::Simple 'mirror';
+      my $downloads= DBIx::TaskQueue::Worker->new(
+          dsn => 'dbi:SQLite:dbname=mytaskqueue.sqlite',
+          queue => 'http.fetch',
+      );
+      $downloads->run(
+          cb => sub {
+              my( $payload )= @_;
+              mirror $payload->{url} => $payload->{target}
+                  or die "Failed, will retry";
+              return { status => 'OK', %$payload };
+          },
+      );
+
+  `->enqueue %task'
+      my $job= $q->enqueue(
+          start_in => 60, # delay job for 60 seconds
+          payload => {
+              url => 'http://www.example.com/',
+              target => '~/downloads/www.example.com.html',
+          },
+      );
+      say sprintf "Launched job %s",
+          $job->id;
+
+  `->fetch( $max_items )'
+        while( my $tasks= $q->fetch( 5 )) {
+            for my $task ( @$tasks ) {
+                ...
+            }
+        }
+
+    Fetches and locks up to `$max_items' tasks for processing by this
+    worker. The items are returned as an array reference, not as a list.
+
+    This method blocks until at least one item is available.
+
+  `->next( $max_items )'
+    Synonym for `->fetch' to be API compatible with Data::Bulk::Stream.
+
+  `$q->purge'
+      $q->purge()
+
+    Marks all reserved, pending or running tasks as abandoned.
+
+    This is mostly useful if too many bogus jobs have been submitted to a
+    queue and you want a fresh start.
+
+Dancer::Plugin::Queue API
+    This module also implements the Dancer::Plugin::Queue API
+
+  `$q->add_msg'
+  `$q->get_msg'
+  `$q->remove_msg'
+    See Dancer::Plugin::Queue for more discussion.
+
+Task state sequence
+    Garish ASCII Art follows
+
+      pending  <-------------------------------+
+         |                                     |
+         v                                     | ->release()
+      reserved --------------+-----------------+
+         |                   | ->cancel()
+         |                   v
+         |               cancelled
+         | ->start()
+         v
+      running----------------+---------------------+
+         | ->finish()        | ->fail()            | ->fail()
+         v                   v                     v
+       done                failed (retries)    abandoned (no retries)
+  
+Queue characteristics
+    *   Low throughput
+
+        This queue reaches a sustained throughput of x/s messages when using
+        two local processes. This throughput drops to x/s messages when
+        using two writers and two readers. The main intent for this queue is
+        for long-running low-volume jobs.
+
+    *   Brokerless
+
+        This queue does not need a central job manager like Redis. Just fire
+        up the producers and consumers and be done.
+
+    *   Persistent
+
+        This queue is persistent.
+
+    *   Automatic retries
+
+        A worker will retry a job if it fails. The first five retries will
+        be with linear delay, after that an exponential backoff will be
+        used.
+
+    *   M:N producers / consumers
+
+        This queue supports all four distribution mechanisms, 1:1 , 1:M ,
+        M:1 and M:N. The main use cases are 1:M and M:1 .
+
+SEE ALSO
+  APIs
+    perlipc
+
+    Data::Stream::Bulk
+
+    Dancer::Plugin::Queue
+
+  Other queue managers / queue systems
+    Minion
+
+    Queue::DBI
+
