@@ -2,6 +2,9 @@ package DBIx::TaskQueue::Monitor;
 use strict;
 use Carp qw(croak);
 
+use vars qw'$VERSION';
+$VERSION = '0.01';
+
 sub new {
     my( $class, %options );
     

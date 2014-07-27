@@ -5,6 +5,9 @@ use DBIx::TaskQueue;
 use Carp qw(croak carp);
 use Try::Tiny;
 
+use vars qw'$VERSION';
+$VERSION = '0.01';
+
 =head1 NAME
 
 DBIx::TaskQueue::Worker - convenience class for implementing a worker process
