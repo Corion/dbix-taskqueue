@@ -34,9 +34,15 @@ WriteMakefile1(
     'NAME'          => $module,
     'LICENSE'       => 'perl',
     'VERSION_FROM'  => $module_pm,
+    'MIN_PERL_VERSION' => 5.010, # for the // operator
     'PREREQ_PM'     => {
                        'DBI' => 0,
+                       'Try::Tiny' => 0,
+                       'Sys::Hostname' => 0,
+                       'Algorithm::TokenBucket' => 0,
+                       'JSON::XS' => 0,
                        'DBD::SQLite' => 0, # for the tests
+                       'POSIX' => 0, # for strftime
                       }, # e.g., Module::Name => 1.1
     ABSTRACT_FROM   => $module_pm, # retrieve abstract from module
     AUTHOR          => 'Max Maischein <corion@cpan.org>',
