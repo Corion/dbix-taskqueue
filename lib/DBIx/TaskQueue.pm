@@ -13,6 +13,10 @@ use POSIX qw(strftime);
 use vars qw'$VERSION';
 $VERSION = '0.01';
 
+=head1 NAME
+
+DBIx::TaskQueue - a persistent task queue for long running tasks
+
 =head1 SYNOPSIS
 
   # Producer
