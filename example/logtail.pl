@@ -4,9 +4,11 @@ use DBIx::TaskQueue;
 use DBIx::TaskQueue::Monitor;
 use DBIx::RunSQL;
 
+my $name = shift || 'ping';
+
 my $q= DBIx::TaskQueue->new(
     create => 1,
-    queue => 'pingpong',
+    queue => $name,
 );
 
 my $m= DBIx::TaskQueue::Monitor->new(

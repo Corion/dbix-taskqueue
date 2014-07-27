@@ -2,24 +2,37 @@
 use strict;
 use DBIx::TaskQueue::Worker;
 
+use Getopt::Long;
+GetOptions(
+    'start' => \my $init,
+);
+
+my $source_queue= $ARGV[0] eq 'ping' ? 'ping' : 'pong';
+my $target_queue= $source_queue eq 'ping' ? 'pong' : 'ping';
+
 my $w= DBIx::TaskQueue::Worker->new(
     create => 1,
-    queue => 'pingpong',
+    queue => $source_queue,
     retry_delay => 0,
 );
 
-my @tasks= map {
+if( $init ) {
     $w->queue->enqueue(
         payload => { num => $_, count => 0 },
-        #start_in => (10-$_) * 5,
-        start_in => 1,
-        max_retries => -1,
-    )
-} 1..100;
+        retries => -1,
+    ) for 1..100;
+};
+
+my $next= DBIx::TaskQueue->new(
+    create => 1,
+    queue => $target_queue,
+    retry_delay => 0,
+);
 
 my $start= time;
 $w->run(
     batch => 10,
+    sleep => 1,
     cb => sub {
         my( $payload, $task, $q, $quit )= @_;
         #warn Dumper $task;
@@ -34,7 +47,7 @@ $w->run(
             if( $count < 100) {
                 $count++;
                 #warn "Requeueing $num ($count)";
-                $q->queue->enqueue( payload => { num => $num, count => $count }, retries => -1 );
+                $next->enqueue( payload => { num => $num, count => $count }, retries => -1 );
             } else {
                 warn "$num done: $count";
             };
