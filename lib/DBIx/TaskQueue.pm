@@ -15,11 +15,12 @@ $VERSION = '0.01';
 
 =head1 NAME
 
-DBIx::TaskQueue - a persistent task queue for long running tasks
+DBIx::TaskQueue - a persistent,low volume task queue for long running tasks
 
 =head1 SYNOPSIS
 
   # Producer
+  use DBIx::TaskQueue;
   my $queue= DBIx::TaskQueue->new(
       dsn => 'dbi:SQLite:dbname=mytaskqueue.sqlite',
       queue => 'http.fetch',
