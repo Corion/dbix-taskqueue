@@ -27,7 +27,7 @@ sub queue { $_[0]->{queue} }
 sub ts { $_[0]->{queue}->ts($_[1]) }
 sub create_tasks { shift->{queue}->create_tasks(@_) }
 
-sub running_tasks {
+sub running_task_count {
     my ($self) = @_;
     my $running_tasks = $self->dbh->selectall_arrayref(<<SQL);
         SELECT count(*)
@@ -40,7 +40,7 @@ SQL
     $running_tasks->[0]->[0]
 };
 
-sub pending_tasks {
+sub pending_task_count {
     my ($self) = @_;
     my $table= $self->table;
     my $pending_tasks = $self->dbh->selectall_arrayref(<<SQL);
@@ -52,7 +52,7 @@ SQL
     $pending_tasks->[0]->[0]
 };
 
-sub outstanding_tasks {
+sub outstanding_task_count {
     my ($self) = @_;
     my $table= $self->table;
     my $pending_tasks = $self->dbh->selectall_arrayref(<<SQL);
@@ -62,6 +62,29 @@ sub outstanding_tasks {
 SQL
 
     $pending_tasks->[0]->[0]
+};
+
+sub overdue_tasks {
+    my ($self, %options) = @_;
+    my $before= delete $options{ started_before }
+               || time - delete $options{ started_ago }
+               ;
+    croak "Need either 'started_before' or 'started_ago'"
+        unless $before;
+    $before= $self->ts( $before );
+    my $table= $self->table;
+    my $overdue = $self->dbh->selectall_arrayref(<<SQL, { Slice => {}}, $before);
+        SELECT *
+        FROM $table
+        WHERE status IN ('running')
+          and started_at <= ?
+SQL
+
+    $self->queue->thaw_task( $_ )
+        for @$overdue;
+
+    return
+        $self->create_tasks( $overdue );
 };
 
 sub task_load {
